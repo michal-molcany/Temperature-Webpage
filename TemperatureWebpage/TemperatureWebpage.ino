@@ -21,6 +21,24 @@ bool isSDcard = false;
 
 ESP8266WebServer server(80);
 
+bool InitalizeSDcard()
+{
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(SS)) {
+    Serial.println("initialization failed!");
+    isSDcard = false;
+
+  }
+  else
+  {
+    Serial.println("initialization done.");
+    isSDcard = true;
+  }
+  return isSDcard;
+}
+
+
 void handleMeasuredData()
 {
   String header;
@@ -38,10 +56,9 @@ void handleMeasuredData()
     // close the file:
     myFile.close();
   }
-//  rows.replace(",", "&emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp;");
-//  rows.replace("\n", "<br>");
+
   String content = MeasuredDataPageHeader;
-  content += "<table border='1'><tr><th width='230'>Time</th><th width='100'>Temperature</th><th>Humidity</th></tr>";
+  content += TableHeader;
   content += rows;
   content += "</table></body></html>";
   server.send(200, "text/html", content);
@@ -57,11 +74,7 @@ void handleRoot() {
   RTC.read(tm);
 
   String header;
-//  if (!is_authentified()) {
-//    String header = "HTTP/1.1 301 OK\r\nLocation: /login\r\nCache-Control: no-cache\r\n\r\n";
-//    server.sendContent(header);
-//    return;
-//  }
+
   String content = PageHeader;
   if (server.hasHeader("User-Agent")) {
     content += "<table><tr><td><b>The user agent used is: </b></td><td>" + server.header("User-Agent") + "</td></tr><tr><td> </td></tr>";
@@ -122,26 +135,28 @@ void setup(void) {
 
   Serial.print("Initializing SD card...");
 
-  if (!SD.begin(SS)) {
-    Serial.println("initialization failed!");
-    isSDcard = false;
-  }
-  else
-  {
-    Serial.println("initialization done.");
-    isSDcard = true;
-  }
+  InitalizeSDcard();
 
   WiFi.begin(ssid, password);
 
   Serial.println();
+  Serial.println("Connecting to WiFi");
 
+  byte i = 0;
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(".");
+    if (i > 30)
+    {
+      Serial.println();
+      Serial.println("Connection failed");
+      return;
+    }
+    i++;
   }
-  Serial.println("");
+  Serial.println();
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
@@ -149,7 +164,6 @@ void setup(void) {
 
 
   server.on("/", handleRoot);
-  //server.on("/login", handleLogin);
   server.on("/measuredData", handleMeasuredData);
   server.on("/inline", []() {
     server.send(200, "text/plain", "this works without need of authentification");
@@ -171,6 +185,12 @@ void loop(void) {
   byte minutes = minute();
   if (minutes % 15 == 0 && minutes != lastMinutes)
   {
+    if (!isSDcard)
+    {
+      if (!InitalizeSDcard())
+        return;
+    }
+
     lastMinutes = minutes;
     myFile = SD.open(fileName, FILE_WRITE);
 
