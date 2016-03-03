@@ -42,9 +42,8 @@ bool InitalizeSDcard()
 void handleMeasuredData()
 {
   String header;
-
-  int lineNumber = 0;
   String rows;
+  String content = MeasuredDataPageHeader;
   myFile = SD.open(fileName);
   if (myFile)
   {
@@ -55,12 +54,18 @@ void handleMeasuredData()
     }
     // close the file:
     myFile.close();
+
+    content += TableHeader;
+    content += rows;
+    content += "</table></body></html>";
+    Serial.println(rows);
+  }
+  else
+  {
+    content += "<p color='red'>File with data is not aviable.</p>";
+    content += "</body></html>";
   }
 
-  String content = MeasuredDataPageHeader;
-  content += TableHeader;
-  content += rows;
-  content += "</table></body></html>";
   server.send(200, "text/html", content);
 }
 
@@ -134,13 +139,61 @@ void setup(void) {
   delay(50);
 
   Serial.print("Initializing SD card...");
+  String ssidString = "";
+  String passwordString = "";
+  if (InitalizeSDcard())
+  {
+    bool isSsid = true;
 
-  InitalizeSDcard();
+    myFile = SD.open("wifi");
 
-  WiFi.begin(ssid, password);
+    if (myFile)
+    {
+      while (myFile.available())
+      {
+        char currentChar = (char)myFile.read();
+
+        if (currentChar == '\n')
+        {
+          isSsid = false;
+        }
+        else
+        {
+          if (isSsid)
+          {
+            ssidString += currentChar;
+          }
+          else
+          {
+            passwordString += currentChar;
+          }
+        }
+      }
+      char s[ssidString.length()];
+      char p[passwordString.length()];
+      ssidString.toCharArray(s, ssidString.length());
+      passwordString.toCharArray(p, passwordString.length() + 1);
+
+      myFile.close();
+      WiFi.begin(s, p);
+    }
+    else
+    {
+      Serial.println("Wifi file not found");
+      ssidString = ssid;
+      WiFi.begin(ssid, password);
+    }
+  }
+  else
+  {
+    Serial.println("Wifi file not found");
+    ssidString = ssid;
+    WiFi.begin(ssid, password);
+  }
 
   Serial.println();
-  Serial.println("Connecting to WiFi");
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssidString);
 
   byte i = 0;
   // Wait for connection
@@ -158,7 +211,7 @@ void setup(void) {
   }
   Serial.println();
   Serial.print("Connected to ");
-  Serial.println(ssid);
+  Serial.println(ssidString);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
