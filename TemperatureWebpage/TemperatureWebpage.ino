@@ -8,11 +8,17 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include "ClockSync.h"
 #include "webpage.h"
 
 //WiFi credentials
 const char* ssid = "****";
 const char* password = "****";
+
+String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
+ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
+const int CurrentTimezone = 2;
+
 
 File myFile;
 byte lastMinutes = 0;
@@ -36,6 +42,15 @@ bool InitalizeSDcard()
     isSDcard = true;
   }
   return isSDcard;
+}
+
+void timeUpdate()
+{
+  tmElements_t tm;
+  clockSync.updateTime();
+  delay(1000);
+  tm=clockSync.getDateTime(CurrentTimezone);
+  RTC.write(tm);
 }
 
 void handleRawData()
@@ -62,7 +77,7 @@ void handleRawData()
     content += "<p color='red'>File with data is not aviable.</p>";
     content += "</body></html>";
   }
-   server.send(200, "text/html", content);
+  server.send(200, "text/html", content);
 }
 
 void handleMeasuredData()
@@ -239,6 +254,7 @@ void setup(void) {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  timeUpdate();
 
   server.on("/", handleRoot);
   server.on("/measuredData", handleMeasuredData);
