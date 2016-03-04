@@ -38,10 +38,35 @@ bool InitalizeSDcard()
   return isSDcard;
 }
 
+void handleRawData()
+{
+  String content = RawDataDataPageHeader;
+  myFile = SD.open(fileName);
+  if (myFile)
+  {
+    String rows;
+    // read from the file until there's nothing else in it:
+    while (myFile.available())
+    {
+      rows += (char)myFile.read();
+    }
+    // close the file:
+    myFile.close();
+
+    content += TableHeader;
+    content += rows;
+    content += "</table></body></html>";
+  }
+  else
+  {
+    content += "<p color='red'>File with data is not aviable.</p>";
+    content += "</body></html>";
+  }
+   server.send(200, "text/html", content);
+}
 
 void handleMeasuredData()
 {
-  String header;
   String rows;
   String content = MeasuredDataPageHeader;
   myFile = SD.open(fileName);
@@ -58,7 +83,6 @@ void handleMeasuredData()
     content += TableHeader;
     content += rows;
     content += "</table></body></html>";
-    Serial.println(rows);
   }
   else
   {
@@ -218,6 +242,7 @@ void setup(void) {
 
   server.on("/", handleRoot);
   server.on("/measuredData", handleMeasuredData);
+  server.on("/rawData", handleRawData);
   server.on("/inline", []() {
     server.send(200, "text/plain", "this works without need of authentification");
   });
