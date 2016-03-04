@@ -279,13 +279,13 @@ void loop(void) {
   byte minutes = minute();
   if (minutes % 15 == 0 && minutes != lastMinutes)
   {
+    lastMinutes = minutes;
     if (!isSDcard)
     {
       if (!InitalizeSDcard())
         return;
     }
-
-    lastMinutes = minutes;
+   
     myFile = SD.open(fileName, FILE_WRITE);
 
     if (myFile)
