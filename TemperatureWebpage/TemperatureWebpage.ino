@@ -19,6 +19,7 @@ String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "A
 ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
 const int CurrentTimezone = 2;
 
+const int MaxNumberOfLines = 50;
 
 File myFile;
 byte lastMinutes = 0;
@@ -49,34 +50,52 @@ void timeUpdate()
   tmElements_t tm;
   clockSync.updateTime();
   delay(1000);
-  tm=clockSync.getDateTime(CurrentTimezone);
+  tm = clockSync.getDateTime(CurrentTimezone);
   RTC.write(tm);
 }
 
-void handleRawData()
+String readLastData()
 {
-  String content = RawDataDataPageHeader;
+  String rows;
   myFile = SD.open(fileName);
+  int i, numberOfLines = 0;
   if (myFile)
   {
-    String rows;
     // read from the file until there's nothing else in it:
     while (myFile.available())
     {
-      rows += (char)myFile.read();
+      myFile.readStringUntil('\n');
+      numberOfLines++;
     }
+
     // close the file:
     myFile.close();
 
-    content += TableHeader;
-    content += rows;
-    content += "</table></body></html>";
+    myFile = SD.open(fileName);
+    while (myFile.available())
+    {
+      if (numberOfLines - MaxNumberOfLines > i)
+      {
+        myFile.readStringUntil('\n');
+      }
+      else
+      {
+        rows += myFile.readStringUntil('\n');
+      }
+      i++;
+    }
+    myFile.close();
   }
-  else
-  {
-    content += "<p color='red'>File with data is not aviable.</p>";
-    content += "</body></html>";
-  }
+  return rows;
+}
+void handleRawData()
+{
+  String content = RawDataDataPageHeader;
+
+  content += TableHeader;
+  content += readLastData();
+  content += "</table></body></html>";
+
   server.send(200, "text/html", content);
 }
 
@@ -84,26 +103,10 @@ void handleMeasuredData()
 {
   String rows;
   String content = MeasuredDataPageHeader;
-  myFile = SD.open(fileName);
-  if (myFile)
-  {
-    // read from the file until there's nothing else in it:
-    while (myFile.available())
-    {
-      rows += (char)myFile.read();
-    }
-    // close the file:
-    myFile.close();
 
-    content += TableHeader;
-    content += rows;
-    content += "</table></body></html>";
-  }
-  else
-  {
-    content += "<p color='red'>File with data is not aviable.</p>";
-    content += "</body></html>";
-  }
+  content += TableHeader;
+  content += readLastData();
+  content += "</table></body></html>";
 
   server.send(200, "text/html", content);
 }
@@ -285,7 +288,7 @@ void loop(void) {
       if (!InitalizeSDcard())
         return;
     }
-   
+
     myFile = SD.open(fileName, FILE_WRITE);
 
     if (myFile)
