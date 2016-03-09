@@ -19,7 +19,7 @@ String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "A
 ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
 const int CurrentTimezone = 2;
 
-const int MaxNumberOfLines = 50;
+const int MaxNumberOfLines = 64;
 
 File myFile;
 byte lastMinutes = 0;
@@ -74,7 +74,7 @@ String readLastData()
     myFile = SD.open(fileName);
     while (myFile.available())
     {
-      if (numberOfLines - MaxNumberOfLines > i)
+      if (numberOfLines - MaxNumberOfLines >= i)
       {
         myFile.readStringUntil('\n');
       }
