@@ -8,11 +8,18 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include "ClockSync.h"
 #include "webpage.h"
 
 //WiFi credentials
 const char* ssid = "****";
 const char* password = "****";
+
+String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
+ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
+const int CurrentTimezone = 2;
+
+const int MaxNumberOfLines = 50;
 
 File myFile;
 byte lastMinutes = 0;
@@ -21,29 +28,86 @@ bool isSDcard = false;
 
 ESP8266WebServer server(80);
 
-void handleMeasuredData()
+bool InitalizeSDcard()
 {
-  String header;
+  Serial.print("Initializing SD card...");
 
-  int lineNumber = 0;
+  if (!SD.begin(SS)) {
+    Serial.println("initialization failed!");
+    isSDcard = false;
+
+  }
+  else
+  {
+    Serial.println("initialization done.");
+    isSDcard = true;
+  }
+  return isSDcard;
+}
+
+void timeUpdate()
+{
+  tmElements_t tm;
+  clockSync.updateTime();
+  delay(1000);
+  tm = clockSync.getDateTime(CurrentTimezone);
+  RTC.write(tm);
+}
+
+String readLastData()
+{
   String rows;
   myFile = SD.open(fileName);
+  int i, numberOfLines = 0;
   if (myFile)
   {
     // read from the file until there's nothing else in it:
     while (myFile.available())
     {
-      rows += (char)myFile.read();
+      myFile.readStringUntil('\n');
+      numberOfLines++;
     }
+
     // close the file:
     myFile.close();
+
+    myFile = SD.open(fileName);
+    while (myFile.available())
+    {
+      if (numberOfLines - MaxNumberOfLines > i)
+      {
+        myFile.readStringUntil('\n');
+      }
+      else
+      {
+        rows += myFile.readStringUntil('\n');
+      }
+      i++;
+    }
+    myFile.close();
   }
-//  rows.replace(",", "&emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp;");
-//  rows.replace("\n", "<br>");
-  String content = MeasuredDataPageHeader;
-  content += "<table border='1'><tr><th width='230'>Time</th><th width='100'>Temperature</th><th>Humidity</th></tr>";
-  content += rows;
+  return rows;
+}
+void handleRawData()
+{
+  String content = RawDataDataPageHeader;
+
+  content += TableHeader;
+  content += readLastData();
   content += "</table></body></html>";
+
+  server.send(200, "text/html", content);
+}
+
+void handleMeasuredData()
+{
+  String rows;
+  String content = MeasuredDataPageHeader;
+
+  content += TableHeader;
+  content += readLastData();
+  content += "</table></body></html>";
+
   server.send(200, "text/html", content);
 }
 
@@ -57,11 +121,7 @@ void handleRoot() {
   RTC.read(tm);
 
   String header;
-//  if (!is_authentified()) {
-//    String header = "HTTP/1.1 301 OK\r\nLocation: /login\r\nCache-Control: no-cache\r\n\r\n";
-//    server.sendContent(header);
-//    return;
-//  }
+
   String content = PageHeader;
   if (server.hasHeader("User-Agent")) {
     content += "<table><tr><td><b>The user agent used is: </b></td><td>" + server.header("User-Agent") + "</td></tr><tr><td> </td></tr>";
@@ -121,36 +181,87 @@ void setup(void) {
   delay(50);
 
   Serial.print("Initializing SD card...");
+  String ssidString = "";
+  String passwordString = "";
+  if (InitalizeSDcard())
+  {
+    bool isSsid = true;
 
-  if (!SD.begin(SS)) {
-    Serial.println("initialization failed!");
-    isSDcard = false;
+    myFile = SD.open("wifi");
+
+    if (myFile)
+    {
+      while (myFile.available())
+      {
+        char currentChar = (char)myFile.read();
+
+        if (currentChar == '\n')
+        {
+          isSsid = false;
+        }
+        else
+        {
+          if (isSsid)
+          {
+            ssidString += currentChar;
+          }
+          else
+          {
+            passwordString += currentChar;
+          }
+        }
+      }
+      char s[ssidString.length()];
+      char p[passwordString.length()];
+      ssidString.toCharArray(s, ssidString.length());
+      passwordString.toCharArray(p, passwordString.length() + 1);
+
+      myFile.close();
+      WiFi.begin(s, p);
+    }
+    else
+    {
+      Serial.println("Wifi file not found");
+      ssidString = ssid;
+      WiFi.begin(ssid, password);
+    }
   }
   else
   {
-    Serial.println("initialization done.");
-    isSDcard = true;
+    Serial.println("Wifi file not found");
+    ssidString = ssid;
+    WiFi.begin(ssid, password);
   }
-
-  WiFi.begin(ssid, password);
 
   Serial.println();
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssidString);
 
+  byte i = 0;
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(".");
+    if (i > 30)
+    {
+      Serial.println();
+      Serial.println("Connection failed");
+      return;
+    }
+    i++;
   }
-  Serial.println("");
+  Serial.println();
   Serial.print("Connected to ");
-  Serial.println(ssid);
+  Serial.println(ssidString);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  timeUpdate();
 
   server.on("/", handleRoot);
-  //server.on("/login", handleLogin);
   server.on("/measuredData", handleMeasuredData);
+  server.on("/rawData", handleRawData);
   server.on("/inline", []() {
     server.send(200, "text/plain", "this works without need of authentification");
   });
@@ -172,6 +283,12 @@ void loop(void) {
   if (minutes % 15 == 0 && minutes != lastMinutes)
   {
     lastMinutes = minutes;
+    if (!isSDcard)
+    {
+      if (!InitalizeSDcard())
+        return;
+    }
+
     myFile = SD.open(fileName, FILE_WRITE);
 
     if (myFile)
