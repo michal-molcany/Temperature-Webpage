@@ -280,7 +280,7 @@ void loop(void) {
   server.handleClient();
   setSyncProvider(RTC.get);
   byte minutes = minute();
-  if (minutes % 15 == 0 && minutes != lastMinutes)
+  if (minutes == 45 && minutes != lastMinutes)
   {
     lastMinutes = minutes;
     if (!isSDcard)
