@@ -28,6 +28,48 @@ bool isSDcard = false;
 
 ESP8266WebServer server(80);
 
+String getDateTime()
+{
+  String content = String(year());
+  content += "-";
+  byte d = month();
+  if (d < 10)
+  {
+    content += "0";
+  }
+  content += d;
+  content += "-";
+  d = day();
+  if (d < 10)
+  {
+    content += "0";
+  }
+  content += d;
+  content += " ";
+
+  d = hour();
+  if (d < 10)
+  {
+    content += "0";
+  }
+  content += d;
+  content += ":";
+  d = minute();
+  if (d < 10)
+  {
+    content += "0";
+  }
+  content += d;
+  content += ":";
+  d = second();
+  if (d < 10)
+  {
+    content += "0";
+  }
+  content += d;
+  return content;
+}
+
 bool InitalizeSDcard()
 {
   Serial.print("Initializing SD card...");
@@ -127,29 +169,28 @@ void handleRoot() {
     content += "<table><tr><td><b>The user agent used is: </b></td><td>" + server.header("User-Agent") + "</td></tr><tr><td> </td></tr>";
   }
 
-  Wire.requestFrom(9, 2);    // request 6 bytes from slave device #8
+  Wire.requestFrom(9, 4);    // request 4 bytes from slave device #9
   String i2cResult;
   while (Wire.available())
-  { // slave may send less than requested
+  {
     i2cResult += Wire.read();
   }
-  Serial.println(i2cResult);
 
   setSyncProvider(RTC.get);
   content += "<tr><td><b>Wifi strenght:</b></td><td>";
   content += rssi;
   content += " dB</td></tr><tr><td><b>Temperature senzor:</b></td><td>";
   content += i2cResult.substring(0, 2);
+  content += ".";
+  content += i2cResult.substring(2, 3);
   content += " C</td></tr>";
   content += "<tr><td><b>Humidity senzor:</b></td><td>";
-  content += i2cResult.substring(2);
+  content += i2cResult.substring(3, 5);
+  content += ".";
+  content += i2cResult.substring(5,6);
   content += " %</td></tr>";
   content += "<tr><td><b>Time:</b></td><td>";
-  content += hour();
-  content += ":";
-  content += minute();
-  content += ":";
-  content += second();
+  content += getDateTime();
   content += "</td></tr></table>";
   if (isSDcard)
     content += "<br><p>SD card is initialized. <a href=\"/measuredData\">Measured data</a>";
@@ -262,9 +303,6 @@ void setup(void) {
   server.on("/", handleRoot);
   server.on("/measuredData", handleMeasuredData);
   server.on("/rawData", handleRawData);
-  server.on("/inline", []() {
-    server.send(200, "text/plain", "this works without need of authentification");
-  });
 
   server.onNotFound(handleNotFound);
   //here the list of headers to be recorded
@@ -274,6 +312,7 @@ void setup(void) {
   server.collectHeaders(headerkeys, headerkeyssize );
   server.begin();
   Serial.println("HTTP server started");
+  Serial.println(getDateTime());
 }
 
 void loop(void) {
@@ -293,54 +332,22 @@ void loop(void) {
 
     if (myFile)
     {
-      Wire.requestFrom(9, 2);    // request 6 bytes from slave device #8
+      Wire.requestFrom(9, 10);    // request 2 bytes from slave device #8
       String i2cResult;
       while (Wire.available())
       { // slave may send less than requested
         i2cResult += Wire.read();
       }
       String content = "<tr><td>";
-      content += year();
-      content += "-";
-      byte d = month();
-      if (d < 10)
-      {
-        content += "0";
-      }
-      content += d;
-      content += "-";
-      d = day();
-      if (d < 10)
-      {
-        content += "0";
-      }
-      content += d;
-      content += " ";
-
-      d = hour();
-      if (d < 10)
-      {
-        content += "0";
-      }
-      content += d;
-      content += ":";
-      d = minute();
-      if (d < 10)
-      {
-        content += "0";
-      }
-      content += d;
-      content += ":";
-      d = second();
-      if (d < 10)
-      {
-        content += "0";
-      }
-      content += d;
+      content += getDateTime();
       content += "</td><td>";
       content += i2cResult.substring(0, 2);
+      content += ".";
+      content += i2cResult.substring(2, 3);
       content += "</td><td>";
-      content += i2cResult.substring(2);
+      content += i2cResult.substring(3, 5);
+      content += ".";
+      content += i2cResult.substring(5,6);
       content += "</td></tr>";
       myFile.println(content);
       myFile.close();
@@ -353,5 +360,4 @@ void loop(void) {
     }
   }
 }
-
 
