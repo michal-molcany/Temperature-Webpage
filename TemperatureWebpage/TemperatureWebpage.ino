@@ -22,7 +22,7 @@ const int CurrentTimezone = 2;
 const int MaxNumberOfLines = 64;
 
 File myFile;
-byte lastMinutes = 0;
+byte lastHour = 0;
 String fileName = "th.csv";
 bool isSDcard = false;
 
@@ -318,10 +318,10 @@ void setup(void) {
 void loop(void) {
   server.handleClient();
   setSyncProvider(RTC.get);
-  byte minutes = minute();
-  if (minutes == 45 && minutes != lastMinutes)
+  byte hours = hour();
+  if (minute() == 45 && hours != lastHour)
   {
-    lastMinutes = minutes;
+    lastHour = hours;
     if (!isSDcard)
     {
       if (!InitalizeSDcard())
