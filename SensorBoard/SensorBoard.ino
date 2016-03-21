@@ -1,10 +1,12 @@
 #include <LiquidCrystal.h>
 #include <DHT22.h>
 #include <Wire.h>
-#include <stdio.h>
 
 #define DHT22_PIN 2
 DHT22 myDHT22(DHT22_PIN);
+
+float lastSampleHumid;
+
 float h = 0;
 float t = 0;
 LiquidCrystal lcd(8, 13, 9, 4, 5, 6, 7);
@@ -41,8 +43,20 @@ void loop() {
   {
     case DHT_ERROR_NONE:
     case DHT_ERROR_CHECKSUM:
-      t = myDHT22.getTemperatureC();
-      h = myDHT22.getHumidity();
+      {
+        float tempHum = myDHT22.getHumidity();
+        t = myDHT22.getTemperatureC();
+        
+        if (tempHum != 55.2)
+        {
+          h = tempHum;
+          lastSampleHumid = tempHum;
+        }
+        else
+        {
+          h = lastSampleHumid;
+        }
+      }
       break;
     case DHT_BUS_HUNG:
       Serial.println("BUS Hung ");
@@ -63,16 +77,15 @@ void loop() {
       Serial.println("Polled to quick ");
       break;
   }
-
-  lcd.clear();
+lcd.setCursor(0, 0);
   lcd.print("T: ");
   lcd.print(t);
   lcd.write((uint8_t)0);
-  lcd.print("C");
+  lcd.print("C       ");
   lcd.setCursor(0, 1);
   lcd.print("H: ");
   lcd.print(h);
-  lcd.print(" %");
+  lcd.print(" %       ");
   Serial.print("T: ");
   Serial.println(t);
   Serial.print("H: ");
