@@ -15,8 +15,8 @@
 const char* ssid = "****";
 const char* password = "****";
 
-String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris",};
-ClockSync clockSync("en", "EN", "dd.MM.yyyy", 3, timeZoneIds);
+String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
+ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
 const int CurrentTimezone = 2;
 
 const int MaxNumberOfLines = 64;

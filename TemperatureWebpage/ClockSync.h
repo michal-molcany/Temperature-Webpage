@@ -17,8 +17,9 @@ class ClockSync: public JsonListener {
     String myDateFormat;
 
     int currentTimeZoneIndex;
-    String dateString;
+    String* dateString;
     long* timeZoneOffsetToUtcMillis;
+    //char* dateString[10];
 
   public:
     ClockSync(String language, String country, String dateFormat, int numberOfTimeZones, String* timeZoneIds);

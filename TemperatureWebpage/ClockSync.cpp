@@ -7,6 +7,7 @@ ClockSync::ClockSync(String language, String country, String dateFormat, int num
   myNumberOfTimeZoneIds = numberOfTimeZones;
   myTimeZoneIds = timeZoneIds;
   timeZoneOffsetToUtcMillis = (long*) malloc(numberOfTimeZones * sizeof(long));
+  dateString = (String*)malloc(numberOfTimeZones * sizeof(String));
 }
 
 void ClockSync::updateTime() {
@@ -17,7 +18,6 @@ void ClockSync::updateTime() {
   // http://api.thingspeak.com/channels/CHANNEL_ID/feeds.json?results=2&api_key=API_KEY
   const char host[] = "oleddisplay.squix.ch";
   String url = "/rest/time";
-  String dateString;
 
   const int httpPort = 80;
   if (!client.connect(host, httpPort)) {
@@ -85,7 +85,7 @@ String ClockSync::getFormattedTime(int timeZoneIndex)
 
 String ClockSync::getFormattedDate(int timeZoneIndex)
 {
-  return dateString;
+  return dateString[timeZoneIndex];
 }
 
 
@@ -160,7 +160,8 @@ tmElements_t ClockSync::getDateTime(int timeZoneIndex)
   tm.Day =  Day;
   tm.Month = Month;
   tm.Year = Year;
-
+  Serial.print("Setted date: ");
+  Serial.println(tmpStr);
   return tm;
 }
 
@@ -198,7 +199,7 @@ void ClockSync::value(String value)
   else if (currentKey == "formattedDate")
   {
     Serial.println("\n-->Date: " + value);
-    dateString = value;
+    dateString[currentTimeZoneIndex] = value;
   }
 }
 
