@@ -42,21 +42,22 @@ void loop() {
   switch (errorCode)
   {
     case DHT_ERROR_NONE:
-    case DHT_ERROR_CHECKSUM:
+
       {
         float tempHum = myDHT22.getHumidity();
         t = myDHT22.getTemperatureC();
-        
-        if (tempHum != 55.2)
-        {
-          h = tempHum;
-          lastSampleHumid = tempHum;
-        }
-        else
-        {
-          h = lastSampleHumid;
-        }
+
+        if (tempHum > 55.1 && tempHum < 55.3)
+          {
+            Serial.println("Humidity sensor error.");
+            break;
+          }
+
+        h = tempHum;
       }
+      break;
+    case DHT_ERROR_CHECKSUM:
+      Serial.println("Checksum error.");
       break;
     case DHT_BUS_HUNG:
       Serial.println("BUS Hung ");
@@ -77,7 +78,7 @@ void loop() {
       Serial.println("Polled to quick ");
       break;
   }
-lcd.setCursor(0, 0);
+  lcd.setCursor(0, 0);
   lcd.print("T: ");
   lcd.print(t);
   lcd.write((uint8_t)0);
