@@ -4,6 +4,7 @@
 
 #define DHT22_PIN 2
 DHT22 myDHT22(DHT22_PIN);
+void readSensorData();
 
 float lastSampleHumid;
 
@@ -36,22 +37,29 @@ void setup() {
   delay(1500);
 }
 
-void loop() {
+void loop()
+{
+
+  readSensorData();
+  delay(2000);
+}
+
+void readSensorData()
+{
   DHT22_ERROR_t errorCode;
   errorCode = myDHT22.readData();
   switch (errorCode)
   {
     case DHT_ERROR_NONE:
-
       {
         float tempHum = myDHT22.getHumidity();
         t = myDHT22.getTemperatureC();
 
         if (tempHum > 55.1 && tempHum < 55.3)
-          {
-            Serial.println("Humidity sensor error.");
-            break;
-          }
+        {
+          Serial.println("Humidity sensor error.");
+          break;
+        }
 
         h = tempHum;
       }
@@ -91,8 +99,6 @@ void loop() {
   Serial.println(t);
   Serial.print("H: ");
   Serial.println(h);
-
-  delay(2000);
 }
 
 void requestEvent()
