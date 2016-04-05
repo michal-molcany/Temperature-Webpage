@@ -26,6 +26,8 @@ byte lastHour = 0;
 String fileName = "th.csv";
 bool isSDcard = false;
 
+String prevHum = "30";
+
 ESP8266WebServer server(80);
 
 String getDateTime()
@@ -187,7 +189,7 @@ void handleRoot() {
   content += "<tr><td><b>Humidity senzor:</b></td><td>";
   content += i2cResult.substring(3, 5);
   content += ".";
-  content += i2cResult.substring(5,6);
+  content += i2cResult.substring(5, 6);
   content += " %</td></tr>";
   content += "<tr><td><b>Time:</b></td><td>";
   content += getDateTime();
@@ -338,6 +340,14 @@ void loop(void) {
       { // slave may send less than requested
         i2cResult += Wire.read();
       }
+      String tmpHum = i2cResult.substring(3, 5);
+      tmpHum += ".";
+      tmpHum += i2cResult.substring(5, 6);
+      if (tmpHum != "55.2")
+      {
+        prevHum = tmpHum;
+      }
+
       String content = "<tr><td>";
       content += getDateTime();
       content += "</td><td>";
@@ -345,9 +355,7 @@ void loop(void) {
       content += ".";
       content += i2cResult.substring(2, 3);
       content += "</td><td>";
-      content += i2cResult.substring(3, 5);
-      content += ".";
-      content += i2cResult.substring(5,6);
+      content += prevHum;
       content += "</td></tr>";
       myFile.println(content);
       myFile.close();

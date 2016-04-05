@@ -39,7 +39,6 @@ void setup() {
 
 void loop()
 {
-
   readSensorData();
   delay(2000);
 }
@@ -55,13 +54,14 @@ void readSensorData()
         float tempHum = myDHT22.getHumidity();
         t = myDHT22.getTemperatureC();
 
-        if (tempHum > 55.1 && tempHum < 55.3)
+        if (tempHum <= 55.1 || tempHum >= 55.3)
+        {
+          h = tempHum;
+        }
+        else
         {
           Serial.println("Humidity sensor error.");
-          break;
         }
-
-        h = tempHum;
       }
       break;
     case DHT_ERROR_CHECKSUM:
