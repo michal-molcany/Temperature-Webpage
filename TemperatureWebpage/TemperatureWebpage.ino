@@ -15,6 +15,10 @@
 const char* ssid = "****";
 const char* password = "****";
 
+const String url = "/rest/data/";
+const char* host = "localhost";
+
+
 String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
 ClockSync clockSync("en", "EN", "dd.MM.yyyy", 4, timeZoneIds);
 const int CurrentTimezone = 2;
@@ -25,11 +29,74 @@ File myFile;
 byte lastHour = 0;
 String fileName = "th.csv";
 bool isSDcard = false;
-
-String prevHum = "30";
+String temperature;
+String humidity;
 
 ESP8266WebServer server(80);
 
+void writeDataOnServer()
+{
+
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+  const int httpPort = 1234;
+  if (!client.connect(host, httpPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  Serial.print("Requesting URL: ");
+  Serial.println(url);
+
+  String request = "{\"sensorId\":1,\"temperature\":" + temperature + ",\"humidity\":" + humidity + "}\r\n\r\n";
+  Serial.println("Request: " + request);
+  // This will send the request to the server
+  client.print("POST " + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Content-Length: " + String(request.length()) + "\r\n" +
+               "Content-Type: application/json\r\n" +
+               "Connection: close\r\n\r\n");
+
+  client.println(request);
+
+  int timeout = millis() + 5000;
+  while (client.available() == 0) {
+    if (timeout - millis() < 0) {
+      Serial.println(">>> Client Timeout !");
+      client.stop();
+      return;
+    }
+  }
+
+  // Read all the lines of the reply from server and print them to Serial
+  while (client.available()) {
+    String line = client.readStringUntil('\r');
+    Serial.print(line);
+  }
+
+  Serial.println();
+  Serial.println("closing connection");
+}
+
+void readI2C()
+{
+  Wire.requestFrom(9, 10);    // request 2 bytes from slave device #8
+  String i2cResult;
+  while (Wire.available())
+  { // slave may send less than requested
+    i2cResult += Wire.read();
+  }
+  temperature = i2cResult.substring(0, 2);
+  temperature += ".";
+  temperature += i2cResult.substring(2, 3);
+
+  humidity = i2cResult.substring(3, 5);
+  humidity += ".";
+  humidity += i2cResult.substring(5, 6);
+}
 String getDateTime()
 {
   String content = String(year());
@@ -170,26 +237,15 @@ void handleRoot() {
   if (server.hasHeader("User-Agent")) {
     content += "<table><tr><td><b>The user agent used is: </b></td><td>" + server.header("User-Agent") + "</td></tr><tr><td> </td></tr>";
   }
-
-  Wire.requestFrom(9, 4);    // request 4 bytes from slave device #9
-  String i2cResult;
-  while (Wire.available())
-  {
-    i2cResult += Wire.read();
-  }
-
+  readI2C();
   setSyncProvider(RTC.get);
   content += "<tr><td><b>Wifi strenght:</b></td><td>";
   content += rssi;
   content += " dB</td></tr><tr><td><b>Temperature senzor:</b></td><td>";
-  content += i2cResult.substring(0, 2);
-  content += ".";
-  content += i2cResult.substring(2, 3);
+  content += temperature;
   content += " C</td></tr>";
   content += "<tr><td><b>Humidity senzor:</b></td><td>";
-  content += i2cResult.substring(3, 5);
-  content += ".";
-  content += i2cResult.substring(5, 6);
+  content += humidity;
   content += " %</td></tr>";
   content += "<tr><td><b>Time:</b></td><td>";
   content += getDateTime();
@@ -329,33 +385,18 @@ void loop(void) {
       if (!InitalizeSDcard())
         return;
     }
+    readI2C();
 
     myFile = SD.open(fileName, FILE_WRITE);
 
     if (myFile)
     {
-      Wire.requestFrom(9, 10);    // request 2 bytes from slave device #8
-      String i2cResult;
-      while (Wire.available())
-      { // slave may send less than requested
-        i2cResult += Wire.read();
-      }
-      String tmpHum = i2cResult.substring(3, 5);
-      tmpHum += ".";
-      tmpHum += i2cResult.substring(5, 6);
-      if (tmpHum != "55.2")
-      {
-        prevHum = tmpHum;
-      }
-
       String content = "<tr><td>";
       content += getDateTime();
       content += "</td><td>";
-      content += i2cResult.substring(0, 2);
-      content += ".";
-      content += i2cResult.substring(2, 3);
+      content += temperature;
       content += "</td><td>";
-      content += prevHum;
+      content += humidity;
       content += "</td></tr>";
       myFile.println(content);
       myFile.close();
@@ -366,6 +407,7 @@ void loop(void) {
       // if the file didn't open, print an error:
       Serial.println("error opening file");
     }
+    writeDataOnServer();
   }
 }
 
