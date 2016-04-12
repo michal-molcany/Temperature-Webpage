@@ -16,7 +16,7 @@ const char* ssid = "****";
 const char* password = "****";
 
 const String url = "/rest/data/";
-const char* host = "localhost";
+const char* host = "http://eskclimate.azurewebsites.net";
 
 
 String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
@@ -26,25 +26,45 @@ const int CurrentTimezone = 2;
 const int MaxNumberOfLines = 64;
 
 File myFile;
+//File logFile;
 byte lastHour = 0;
 String fileName = "th.csv";
+String logFileName = "log.txt";
 bool isSDcard = false;
 String temperature;
 String humidity;
 
 ESP8266WebServer server(80);
 
+
+void writeLogEntry(String data)
+{
+  myFile = SD.open(logFileName, FILE_WRITE);
+  Serial.println("open log file");
+  if (myFile)
+  {
+    String content = getDateTime();
+    content += "\t";
+    content += data;
+    myFile.println(content);
+    Serial.println(content);
+    myFile.close();
+    Serial.println("OK");
+  }
+}
+
 void writeDataOnServer()
 {
-
-  Serial.print("connecting to ");
+  writeLogEntry(F("connecting to server"));
+  Serial.print(F("connecting to "));
   Serial.println(host);
 
   // Use WiFiClient class to create TCP connections
   WiFiClient client;
-  const int httpPort = 1234;
+  const int httpPort = 80;
   if (!client.connect(host, httpPort)) {
-    Serial.println("connection failed");
+    Serial.println(F("connection failed"));
+     writeLogEntry(F("connection failed"));
     return;
   }
 
@@ -67,6 +87,7 @@ void writeDataOnServer()
     if (timeout - millis() < 0) {
       Serial.println(">>> Client Timeout !");
       client.stop();
+      writeLogEntry("Client Timeout");
       return;
     }
   }
@@ -79,6 +100,7 @@ void writeDataOnServer()
 
   Serial.println();
   Serial.println("closing connection");
+  writeLogEntry("closing connection");
 }
 
 void readI2C()
@@ -257,7 +279,8 @@ void handleRoot() {
 }
 
 //no need authentification
-void handleNotFound() {
+void handleNotFound()
+{
   String message = "File Not Found\n\n";
   message += "URI: ";
   message += server.uri();
@@ -270,6 +293,24 @@ void handleNotFound() {
     message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
   server.send(404, "text/plain", message);
+}
+
+void handleLogData()
+{
+  String content = PageHeader;
+  myFile = SD.open(logFileName);
+  if (myFile)
+  {
+    while (myFile.available())
+    {
+      content += myFile.readStringUntil('\n');
+      content += "<br>";
+    }
+    // close the file:
+    myFile.close();
+  }
+  content += "</body></html>";
+  server.send(200, "text/html", content);
 }
 
 void setup(void) {
@@ -346,6 +387,7 @@ void setup(void) {
     {
       Serial.println();
       Serial.println("Connection failed");
+      writeLogEntry("Connection failed");
       return;
     }
     i++;
@@ -355,12 +397,13 @@ void setup(void) {
   Serial.println(ssidString);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
+  //writeLogEntry("IP address: " + WiFi.localIP());
   timeUpdate();
 
   server.on("/", handleRoot);
   server.on("/measuredData", handleMeasuredData);
   server.on("/rawData", handleRawData);
+  server.on("/log", handleLogData);
 
   server.onNotFound(handleNotFound);
   //here the list of headers to be recorded
@@ -370,6 +413,7 @@ void setup(void) {
   server.collectHeaders(headerkeys, headerkeyssize );
   server.begin();
   Serial.println("HTTP server started");
+  writeLogEntry("HTTP server started");
   Serial.println(getDateTime());
 }
 
@@ -385,12 +429,14 @@ void loop(void) {
       if (!InitalizeSDcard())
         return;
     }
+    writeLogEntry("Reading I2C");
     readI2C();
 
     myFile = SD.open(fileName, FILE_WRITE);
 
     if (myFile)
     {
+      writeLogEntry("Open log file");
       String content = "<tr><td>";
       content += getDateTime();
       content += "</td><td>";
@@ -406,6 +452,7 @@ void loop(void) {
     {
       // if the file didn't open, print an error:
       Serial.println("error opening file");
+      writeLogEntry("error opening file");
     }
     writeDataOnServer();
   }
