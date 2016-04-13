@@ -16,7 +16,7 @@ const char* ssid = "****";
 const char* password = "****";
 
 const String url = "/rest/data/";
-const char* host = "http://eskclimate.azurewebsites.net";
+const char* host = "eskclimate.azurewebsites.net";
 
 
 String timeZoneIds [] = {"America/New_York", "Europe/London", "Europe/Paris", "Australia/Sydney"};
@@ -40,16 +40,13 @@ ESP8266WebServer server(80);
 void writeLogEntry(String data)
 {
   myFile = SD.open(logFileName, FILE_WRITE);
-  Serial.println("open log file");
   if (myFile)
   {
     String content = getDateTime();
     content += "\t";
     content += data;
     myFile.println(content);
-    Serial.println(content);
     myFile.close();
-    Serial.println("OK");
   }
 }
 
@@ -96,6 +93,7 @@ void writeDataOnServer()
   while (client.available()) {
     String line = client.readStringUntil('\r');
     Serial.print(line);
+    writeLogEntry(line);
   }
 
   Serial.println();
