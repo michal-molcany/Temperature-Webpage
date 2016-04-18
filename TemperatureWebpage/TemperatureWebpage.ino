@@ -10,6 +10,17 @@ void setup(void) {
   Serial.println(F("SENSOR ACTIVE"));
   delay(50);
 
+  display.init();
+  display.clear();
+  display.display();
+  display.setFont(ArialMT_Plain_16);
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  display.setContrast(255);
+
+  display.drawString(64, 10, "Connecting");
+  display.drawXbm(34, 30, WiFi_Logo_width, WiFi_Logo_height, WiFi_Logo_bits);
+  display.display();
+
   Serial.print(F("Initializing SD card..."));
   String ssidString = "";
   String passwordString = "";
@@ -76,6 +87,10 @@ void setup(void) {
     if (i > 30)
     {
       Serial.println();
+      display.clear();
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.drawStringMaxWidth(0, 0, 128, "Connection failed");
+      display.display();
       Serial.println(F("Connection failed"));
       writeLogEntry(F("Connection failed"));
       return;
@@ -87,7 +102,12 @@ void setup(void) {
   Serial.println(ssidString);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  
+
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawStringMaxWidth(0, 0, 128, "Connected to " + ssidString);
+  display.display();
+
   timeUpdate();
   setSyncProvider(RTC.get);
   server.on("/", handleRoot);
@@ -105,12 +125,34 @@ void setup(void) {
   Serial.println(F("HTTP server started"));
   writeLogEntry(F("HTTP server started"));
   Serial.println(getDateTime());
+
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawStringMaxWidth(0, 0, 128, "HTTP server started");
+  display.display();
+  delay(500);
+  ui.setTargetFPS(30);
+  ui.setActiveSymbole(activeSymbole);
+  ui.setInactiveSymbole(inactiveSymbole);
+  ui.setIndicatorPosition(BOTTOM);
+  ui.setIndicatorDirection(LEFT_RIGHT);
+  ui.setFrameAnimation(SLIDE_LEFT);
+  ui.setFrames(frames, frameCount);
+  ui.init();
 }
 
 void loop(void) {
   server.handleClient();
   setSyncProvider(RTC.get);
   byte hours = hour();
+  byte seconds = second()/10;
+  if (seconds != lastSecond)
+  {
+    lastSecond = seconds;
+    readI2C();
+  }
+  int remainingTimeBudget = ui.update();
+
   if (minute() == 45 && hours != lastHour)
   {
     lastHour = hours;
@@ -160,9 +202,12 @@ void readI2C()
   temperature += ".";
   temperature += i2cResult.substring(2, 3);
 
-  humidity = i2cResult.substring(3, 5);
-  humidity += ".";
-  humidity += i2cResult.substring(5, 6);
+  String tmpHumidity = i2cResult.substring(3, 5);
+  tmpHumidity += ".";
+  tmpHumidity += i2cResult.substring(5, 6);
+
+  if (tmpHumidity != "55.2")
+    humidity = tmpHumidity;
 }
 
 void handleLogData()
@@ -423,4 +468,25 @@ void writeDataOnServer()
   Serial.println();
   Serial.println(F("closing connection"));
   writeLogEntry(F("closing connection"));
+}
+
+bool drawFrame1(SSD1306 *display, SSD1306UiState* state, int x, int y)
+{
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(0 + x, y, "T: ");
+  display->drawString(35 + x, y, temperature + " °C");
+  display->drawString(0 + x, 30 + y, "H:");
+  display->drawString(35 + x, 30 + y, humidity + " %");
+  return false;
+}
+
+bool drawFrame2(SSD1306 *display, SSD1306UiState* state, int x, int y)
+{
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(x, y, "Time:");
+  display->setFont(ArialMT_Plain_10);
+  display->drawString(x, 30 + y,  getDateTime());
+  return false;
 }
