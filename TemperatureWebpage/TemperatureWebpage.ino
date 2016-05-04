@@ -145,7 +145,7 @@ void loop(void) {
   server.handleClient();
   setSyncProvider(RTC.get);
   byte hours = hour();
-  byte seconds = second()/10;
+  byte seconds = second() / 10;
   if (seconds != lastSecond)
   {
     lastSecond = seconds;
@@ -348,8 +348,7 @@ void writeLogEntry(String data)
     logFile.close();
   }
 }
-
-String getDateTime()
+String getDate()
 {
   String content = String(year());
   content += "-";
@@ -366,12 +365,16 @@ String getDateTime()
     content += "0";
   }
   content += d;
-  content += " ";
+  return content;
+}
 
-  d = hour();
+String getTime()
+{
+  String content;
+  byte d = hour();
   if (d < 10)
   {
-    content += "0";
+    content = "0";
   }
   content += d;
   content += ":";
@@ -388,6 +391,13 @@ String getDateTime()
     content += "0";
   }
   content += d;
+  return content;
+}
+String getDateTime()
+{
+  String content = getDate();
+  content += " ";
+  content += getTime();
   return content;
 }
 
@@ -485,8 +495,7 @@ bool drawFrame2(SSD1306 *display, SSD1306UiState* state, int x, int y)
 {
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_24);
-  display->drawString(x, y, "Time:");
-  display->setFont(ArialMT_Plain_10);
-  display->drawString(x, 30 + y,  getDateTime());
+  display->drawString(x, y, getDate());
+  display->drawString(x, 30 + y,  getTime());
   return false;
 }
