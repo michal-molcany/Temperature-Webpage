@@ -11,12 +11,13 @@ void setup(void) {
   delay(50);
 
   display.init();
+  display.flipScreenVertically();
   display.clear();
   display.display();
   display.setFont(ArialMT_Plain_16);
   display.setTextAlignment(TEXT_ALIGN_CENTER);
   display.setContrast(255);
-
+  display.drawRect(0, 0, 127, 63);
   display.drawString(64, 10, "Connecting");
   display.drawXbm(34, 30, WiFi_Logo_width, WiFi_Logo_height, WiFi_Logo_bits);
   display.display();
@@ -101,11 +102,12 @@ void setup(void) {
   Serial.print("Connected to ");
   Serial.println(ssidString);
   Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
+  String ip = WiFi.localIP().toString();
+  Serial.println(ip);
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.drawStringMaxWidth(0, 0, 128, "Connected to " + ssidString);
+  display.drawStringMaxWidth(0, 40, 128, ip);
   display.display();
 
   timeUpdate();
@@ -139,6 +141,7 @@ void setup(void) {
   ui.setFrameAnimation(SLIDE_LEFT);
   ui.setFrames(frames, frameCount);
   ui.init();
+  display.flipScreenVertically();
 }
 
 void loop(void) {
@@ -405,10 +408,10 @@ bool InitalizeSDcard()
 {
   Serial.print(F("Initializing SD card..."));
 
-  if (!SD.begin(SS)) {
+  if (!SD.begin(SS))
+  {
     Serial.println(F("initialization failed!"));
     isSDcard = false;
-
   }
   else
   {
@@ -480,22 +483,24 @@ void writeDataOnServer()
   writeLogEntry(F("closing connection"));
 }
 
-bool drawFrame1(SSD1306 *display, SSD1306UiState* state, int x, int y)
+bool temperatureFrame(SSD1306 *display, SSD1306UiState* state, int x, int y)
 {
   display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->drawRect(0, 0, 127, 63);
   display->setFont(ArialMT_Plain_24);
-  display->drawString(0 + x, y, "T: ");
-  display->drawString(35 + x, y, temperature + " °C");
-  display->drawString(0 + x, 30 + y, "H:");
-  display->drawString(35 + x, 30 + y, humidity + " %");
+  display->drawString(2 + x, y + 2, "T: ");
+  display->drawString(37 + x, y + 2, temperature + " °C");
+  display->drawString(2 + x, 30 + y, "H:");
+  display->drawString(37 + x, 30 + y, humidity + " %");
   return false;
 }
 
-bool drawFrame2(SSD1306 *display, SSD1306UiState* state, int x, int y)
+bool dateTimeFrame(SSD1306 *display, SSD1306UiState* state, int x, int y)
 {
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->drawRect(0, 0, 127, 63);
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_24);
-  display->drawString(x, y, getDate());
-  display->drawString(x, 30 + y,  getTime());
+  display->drawString(x + 64, y + 2, getDate());
+  display->drawString(x + 64, 30 + y,  getTime());
   return false;
 }

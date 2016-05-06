@@ -58,6 +58,6 @@ bool InitalizeSDcard();
 void timeUpdate();
 void writeDataOnServer();
 
-bool drawFrame1(SSD1306 *display, SSD1306UiState* state, int x, int y);
-bool drawFrame2(SSD1306 *display, SSD1306UiState* state, int x, int y);
-bool (*frames[])(SSD1306 *display, SSD1306UiState* state, int x, int y) = { drawFrame1, drawFrame2 };
+bool temperatureFrame(SSD1306 *display, SSD1306UiState* state, int x, int y);
+bool dateTimeFrame(SSD1306 *display, SSD1306UiState* state, int x, int y);
+bool (*frames[])(SSD1306 *display, SSD1306UiState* state, int x, int y) = { dateTimeFrame, temperatureFrame };
