@@ -1,6 +1,9 @@
+#include <DallasTemperature.h>
+#include <OneWire.h>
 #include <DHT22.h>
 #include <Wire.h>
 
+#define ONE_WIRE_BUS 12
 #define DHT22_PIN 2
 DHT22 myDHT22(DHT22_PIN);
 void readSensorData();
@@ -10,12 +13,19 @@ float lastSampleHumid;
 float h = 0;
 float t = 0;
 
+OneWire oneWire(ONE_WIRE_BUS);
+// Pass our oneWire reference to Dallas Temperature.
+DallasTemperature sensors(&oneWire);
+
 
 void setup() {
   Wire.begin(9);                // join i2c bus with address #9
   Wire.onRequest(requestEvent); // register event
   Serial.begin(9600);
   Serial.println("DHT init");
+
+    sensors.begin();
+  sensors.requestTemperatures();
 
   delay(2000);
 }
@@ -30,12 +40,13 @@ void readSensorData()
 {
   DHT22_ERROR_t errorCode;
   errorCode = myDHT22.readData();
+  sensors.requestTemperatures();
   switch (errorCode)
   {
     case DHT_ERROR_NONE:
       {
         float tempHum = myDHT22.getHumidity();
-        t = myDHT22.getTemperatureC();
+        t = sensors.getTempCByIndex(0);
 
         if (tempHum <= 55.1 || tempHum >= 55.3)
         {
