@@ -4,14 +4,18 @@
 #include "images.h"
 
 
-SSD1306   display(0x3c, D5, D6);
+SSD1306   display(0x3c, D14, D15);
 SSD1306Ui ui     ( &display );
+bool drawFrame1(SSD1306 *display, SSD1306UiState* state, int x, int y);
+bool drawFrame2(SSD1306 *display, SSD1306UiState* state, int x, int y);
+
 
 bool (*frames[])(SSD1306 *display, SSD1306UiState* state, int x, int y) = { drawFrame1, drawFrame2 };
 
 int frameCount = 2;
 
 void setup() {
+  Serial.begin(115200);
   Serial.println();
   Serial.println("Begin");
   int counter = 0;

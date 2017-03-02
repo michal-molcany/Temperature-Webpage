@@ -1,7 +1,9 @@
-#include <LiquidCrystal.h>
+#include <DallasTemperature.h>
+#include <OneWire.h>
 #include <DHT22.h>
 #include <Wire.h>
 
+#define ONE_WIRE_BUS 12
 #define DHT22_PIN 2
 DHT22 myDHT22(DHT22_PIN);
 void readSensorData();
@@ -10,31 +12,22 @@ float lastSampleHumid;
 
 float h = 0;
 float t = 0;
-LiquidCrystal lcd(8, 13, 9, 4, 5, 6, 7);
 
-byte customChar[8] = {
-  0b00100,
-  0b01010,
-  0b00100,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000
-};
+OneWire oneWire(ONE_WIRE_BUS);
+// Pass our oneWire reference to Dallas Temperature.
+DallasTemperature sensors(&oneWire);
+
 
 void setup() {
   Wire.begin(9);                // join i2c bus with address #9
   Wire.onRequest(requestEvent); // register event
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("DHT init");
-  lcd.createChar(0, customChar);
-  lcd.begin(16, 2);
-  lcd.print("DHT init");
-  delay(500);
-  lcd.setCursor(0, 1);
-  lcd.print("Requesting data");
-  delay(1500);
+
+    sensors.begin();
+  sensors.requestTemperatures();
+
+  delay(2000);
 }
 
 void loop()
@@ -47,12 +40,13 @@ void readSensorData()
 {
   DHT22_ERROR_t errorCode;
   errorCode = myDHT22.readData();
+  sensors.requestTemperatures();
   switch (errorCode)
   {
     case DHT_ERROR_NONE:
       {
         float tempHum = myDHT22.getHumidity();
-        t = myDHT22.getTemperatureC();
+        t = sensors.getTempCByIndex(0);
 
         if (tempHum <= 55.1 || tempHum >= 55.3)
         {
@@ -86,15 +80,6 @@ void readSensorData()
       Serial.println("Polled to quick ");
       break;
   }
-  lcd.setCursor(0, 0);
-  lcd.print("T: ");
-  lcd.print(t);
-  lcd.write((uint8_t)0);
-  lcd.print("C       ");
-  lcd.setCursor(0, 1);
-  lcd.print("H: ");
-  lcd.print(h);
-  lcd.print(" %       ");
   Serial.print("T: ");
   Serial.println(t);
   Serial.print("H: ");

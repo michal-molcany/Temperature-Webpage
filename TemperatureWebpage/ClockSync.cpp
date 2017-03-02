@@ -17,16 +17,15 @@ void ClockSync::updateTime() {
 
   // http://api.thingspeak.com/channels/CHANNEL_ID/feeds.json?results=2&api_key=API_KEY
   const char host[] = "oleddisplay.squix.ch";
-  String url = "/rest/time";
+  String url = F("/rest/time");
 
   const int httpPort = 80;
   if (!client.connect(host, httpPort)) {
-    Serial.println("connection failed");
+    Serial.println(F("connection failed"));
     return;
   }
 
-
-  Serial.print("Requesting URL: ");
+  Serial.print(F("Requesting URL: "));
   Serial.println(url);
 
   // {"language":"de","country":"CH","timeZoneIds":["Europe/Zurich", "Europe/London"],"dateFormat":"dd.MM.YYYY"}
@@ -48,7 +47,7 @@ void ClockSync::updateTime() {
   client.print("POST " + url + " HTTP/1.1\r\n" +
                "Host: " + host + "\r\n" +
                "Content-Length: " + String(request.length()) + "\r\n" +
-               "Connection: close\r\n\r\n");
+               F("Connection: close\r\n\r\n"));
 
   client.println(request);
 
@@ -106,7 +105,8 @@ int ClockSync::getHours(int timeZoneIndex)
   return ((getSecondsOfDay(timeZoneIndex)  % 86400L) / 3600) % 24;
 }
 
-String ClockSync::getMinutesString(int timeZoneIndex) {
+String ClockSync::getMinutesString(int timeZoneIndex) 
+{
   if (millisOfDayAtUpdate == 0) {
     return "--";
   }
@@ -123,7 +123,8 @@ int ClockSync::getMinutes(int timeZoneIndex)
   return ((getSecondsOfDay(timeZoneIndex) % 3600) / 60);
 }
 
-String ClockSync::getSecondsString(int timeZoneIndex) {
+String ClockSync::getSecondsString(int timeZoneIndex) 
+{
   if (millisOfDayAtUpdate == 0) {
     return "--";
   }
@@ -141,7 +142,8 @@ int ClockSync::getSeconds(int timeZoneIndex)
   return getSecondsOfDay(timeZoneIndex) % 60;
 }
 
-long ClockSync::getSecondsOfDay(int timeZoneIndex) {
+long ClockSync::getSecondsOfDay(int timeZoneIndex) 
+{
   return (millisOfDayAtUpdate + millis() - localMillisAtUpdate + timeZoneOffsetToUtcMillis[timeZoneIndex]) / 1000;
 }
 
@@ -165,15 +167,16 @@ tmElements_t ClockSync::getDateTime(int timeZoneIndex)
   return tm;
 }
 
-void ClockSync::whitespace(char c) {
-
+void ClockSync::whitespace(char c) 
+{
 }
 
-void ClockSync::startDocument() {
-
+void ClockSync::startDocument() 
+{
 }
 
-void ClockSync::key(String key) {
+void ClockSync::key(String key) 
+{
   currentKey = key;
 }
 
@@ -203,22 +206,22 @@ void ClockSync::value(String value)
   }
 }
 
-void ClockSync::endArray() {
-
+void ClockSync::endArray()
+{
 }
 
-void ClockSync::endObject() {
-
+void ClockSync::endObject() 
+{
 }
 
-void ClockSync::endDocument() {
-
+void ClockSync::endDocument() 
+{
 }
 
-void ClockSync::startArray() {
-
+void ClockSync::startArray() 
+{
 }
 
-void ClockSync::startObject() {
-
+void ClockSync::startObject() 
+{
 }
